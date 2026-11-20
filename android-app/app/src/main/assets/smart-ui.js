@@ -1,9 +1,11 @@
 // ==UserScript==
-// @name         Smart – UI mejorada (prueba 15)
+// @name         Smart – UI mejorada
 // @namespace    alexmonroy.smart
-// @version      0.15
+// @version      0.16.0
 // @description  Salta directo a Programación, filtra clases pendientes y moderniza el estilo
-// @match        *://*/*
+// @match        https://schoolpack.smart.edu.co/*
+// @updateURL    https://raw.githubusercontent.com/AlexWebpuro/Mask-Smart-Academy/main/smart-mejorado.user.js
+// @downloadURL  https://raw.githubusercontent.com/AlexWebpuro/Mask-Smart-Academy/main/smart-mejorado.user.js
 // @run-at       document-idle
 // @grant        none
 // ==/UserScript==
@@ -78,6 +80,7 @@
 
   function marcaActiva(texto) {
     const b = document.createElement('div');
+    b.className = 'smx-badge';
     b.textContent = texto;
     Object.assign(b.style, {
       position: 'fixed', bottom: '12px', right: '12px', zIndex: 99999,
@@ -89,6 +92,77 @@
   }
 
   const FUENTE_CSS = `@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');`;
+
+  /* ================= Celular: adaptación a pantallas pequeñas ================= */
+  // 1) Que el navegador use el ancho real del teléfono (Smart no trae esta etiqueta)
+  if (!document.querySelector('meta[name="viewport"]')) {
+    const mv = document.createElement('meta');
+    mv.name = 'viewport';
+    mv.content = 'width=device-width, initial-scale=1';
+    document.head.appendChild(mv);
+  }
+  // 2) Estilos que solo aplican en pantallas angostas
+  insertarCSS(`
+    @media (max-width: 760px) {
+      html, body { overflow-x: hidden !important; max-width: 100vw; }
+      .smx-badge { display: none !important; }
+
+      /* Página de Programación */
+      #TABLE1, #TABLE2, #TABLE5, #W0030TABLE1, #W0030TABLE2 {
+        width: 100% !important; max-width: 100% !important; height: auto !important;
+      }
+      #TABLE1 { margin-top: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
+      #IMAGE1 { width: 100% !important; height: auto !important; max-height: none !important; }
+      #TEXTBLOCK17 { font-size: 16px !important; }
+      #TABLE5 td { padding: 8px 12px !important; }
+      #TABLE5 img { width: 30px !important; height: auto !important; }
+      td[style*="width:650px"], td[style*="width:150px"] { width: auto !important; }
+      .smx-prog-btn { width: 100%; justify-content: center; }
+
+      /* Ventana "Programar clases": botones en varias filas */
+      #TABLE3:has(#vTPEAPROBO), #TABLE3:has(#vTPEAPROBO) > tbody,
+      #TABLE3:has(#vTPEAPROBO) tr, #TABLE3:has(#vTPEAPROBO) td { display: block !important; width: 100% !important; }
+      #TABLE3:has(#vTPEAPROBO) input[type="button"] { padding: 10px 14px !important; margin: 0 6px 6px 0 !important; }
+
+      /* Tarjetas */
+      .smx-card { padding: 16px !important; border-radius: 14px !important; max-width: 100% !important; }
+      .smx-title { font-size: 16px !important; }
+      .smx-select { font-size: 15px !important; padding: 12px 14px !important; }
+
+      /* Ventana "Selección de clases" */
+      .smx-wrap { padding: 8px !important; }
+      .smx-day { flex: 1 1 0; width: auto !important; min-width: 76px; }
+      .smx-hours { grid-template-columns: repeat(2, 1fr) !important; }
+      .smx-hour { padding: 10px 12px !important; }
+      .smx-sum { grid-template-columns: 1fr 1fr !important; }
+    }
+  `);
+  // 3) Ventanas emergentes de Smart a pantalla completa en el celular
+  if (window.top === window) {
+    const fijar = (el, props) => Object.entries(props).forEach(([k, v]) => el.style.setProperty(k, v, 'important'));
+    const ajustarPopups = () => {
+      if (window.innerWidth > 760) return;
+      document.querySelectorAll('iframe[id^="gxp"]').forEach(ifr => {
+        // Subimos desde el iframe hasta el contenedor flotante de la ventana
+        let el = ifr.parentElement, cont = null;
+        for (let i = 0; el && el !== document.body && i < 8; i++, el = el.parentElement) {
+          const pos = getComputedStyle(el).position;
+          if (pos === 'fixed' || pos === 'absolute') { cont = el; break; }
+          fijar(el, { width: '100%', 'max-width': '100%' });
+        }
+        if (cont) fijar(cont, {
+          left: '0', top: '0', right: '0', width: '100vw', 'max-width': '100vw',
+          height: '100%', 'max-height': '100%', margin: '0', transform: 'none', 'border-radius': '0'
+        });
+        const top = ifr.getBoundingClientRect().top;
+        fijar(ifr, { width: '100%', height: Math.max(200, window.innerHeight - Math.max(0, top)) + 'px' });
+      });
+    };
+    let pend = false;
+    const programar = () => { if (pend) return; pend = true; setTimeout(() => { pend = false; ajustarPopups(); }, 150); };
+    new MutationObserver(programar).observe(document.documentElement, { childList: true, subtree: true });
+    window.addEventListener('resize', programar);
+  }
 
   /* ================= Clase programada: cómo llegar + calendario ================= */
   // La ventana "Selección de clases" guarda la reserva en localStorage ('smxReserva').
