@@ -1,0 +1,7 @@
+<resources>
+    <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#C8161D</item>
+        <item name="android:colorAccent">#C8161D</item>
+    </style>
+    <color name="ic_launcher_background">#C8161D</color>
+</resources>
